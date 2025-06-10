@@ -1,21 +1,22 @@
 {
   "files": {
-    "main.css": "/qms-frontend/static/css/main.e6c13ad2.css",
-    "main.js": "/qms-frontend/static/js/main.9488d202.js",
-    "static/js/977.cb5b394e.chunk.js": "/qms-frontend/static/js/977.cb5b394e.chunk.js",
-    "static/js/553.2b8d6941.chunk.js": "/qms-frontend/static/js/553.2b8d6941.chunk.js",
-    "static/js/453.bcc585c4.chunk.js": "/qms-frontend/static/js/453.bcc585c4.chunk.js",
+    "main.css": "/qms-frontend/static/css/main.eb533ca2.css",
+    "main.js": "/qms-frontend/static/js/main.4d9b3057.js",
+    "static/js/977.f4903009.chunk.js": "/qms-frontend/static/js/977.f4903009.chunk.js",
+    "static/js/553.47bd3838.chunk.js": "/qms-frontend/static/js/553.47bd3838.chunk.js",
+    "static/js/453.aad79ce6.chunk.js": "/qms-frontend/static/js/453.aad79ce6.chunk.js",
     "static/media/vsu-logo.png": "/qms-frontend/static/media/vsu-logo.c19e28a25c16ffbd11f1.png",
+    "static/media/new-vsu-logo.png": "/qms-frontend/static/media/new-vsu-logo.235d694a4b6345ca1865.png",
     "static/media/queuing-logo.png": "/qms-frontend/static/media/queuing-logo.6ee7edb0d60ec22674d1.png",
     "index.html": "/qms-frontend/index.html",
-    "main.e6c13ad2.css.map": "/qms-frontend/static/css/main.e6c13ad2.css.map",
-    "main.9488d202.js.map": "/qms-frontend/static/js/main.9488d202.js.map",
-    "977.cb5b394e.chunk.js.map": "/qms-frontend/static/js/977.cb5b394e.chunk.js.map",
-    "553.2b8d6941.chunk.js.map": "/qms-frontend/static/js/553.2b8d6941.chunk.js.map",
-    "453.bcc585c4.chunk.js.map": "/qms-frontend/static/js/453.bcc585c4.chunk.js.map"
+    "main.eb533ca2.css.map": "/qms-frontend/static/css/main.eb533ca2.css.map",
+    "main.4d9b3057.js.map": "/qms-frontend/static/js/main.4d9b3057.js.map",
+    "977.f4903009.chunk.js.map": "/qms-frontend/static/js/977.f4903009.chunk.js.map",
+    "553.47bd3838.chunk.js.map": "/qms-frontend/static/js/553.47bd3838.chunk.js.map",
+    "453.aad79ce6.chunk.js.map": "/qms-frontend/static/js/453.aad79ce6.chunk.js.map"
   },
   "entrypoints": [
-    "static/css/main.e6c13ad2.css",
-    "static/js/main.9488d202.js"
+    "static/css/main.eb533ca2.css",
+    "static/js/main.4d9b3057.js"
   ]
 }
