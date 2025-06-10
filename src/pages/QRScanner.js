@@ -58,9 +58,11 @@ const QRScanner = (props) => {
         (decodedText) => {
           console.log(props.Student_ID);
           if (props.Student_ID === decodedText) {
-            setQrResultValid(true);
-            setQrResultInvalid(false);
+            const isValid = props.Student_ID === decodedText;
+            setQrResultValid(isValid);
+            setQrResultInvalid(!isValid);
             setQrResult(true);
+            props.onScanResult?.(isValid); // <-- inform parent of result
             resetTimer();
             stopScanning();
           } else {

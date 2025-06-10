@@ -35,6 +35,7 @@ import CourseProfile from "./pages/CourseProfile";
 import PurposePost from "./pages/PurposePost";
 import PurposeProfile from "./pages/PurposeProfile";
 import QueueReport from "./pages/QueueReport";
+import RegisterStaff from "./pages/RegisterStaff";
 
 const Layout = () => {
   const { user } = useAuth();
@@ -62,6 +63,14 @@ const Layout = () => {
           element={
             <PublicRoute>
               <Register />
+            </PublicRoute>
+          }
+        />
+        <Route
+          path="/registerstaff"
+          element={
+            <PublicRoute>
+              <RegisterStaff />
             </PublicRoute>
           }
         />

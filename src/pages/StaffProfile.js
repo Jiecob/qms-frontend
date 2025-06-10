@@ -21,6 +21,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import config from "../config";
 import { Password } from "@mui/icons-material";
+import emailjs from "emailjs-com";
 
 const StaffProfile = () => {
   const { id } = useParams();
@@ -201,7 +202,14 @@ const StaffProfile = () => {
                         staffUserAccount
                       )
                       .then(function (response) {
-                        console.log(response.data);
+                        // console.log(response.data);
+
+                        emailSend(
+                          staff.Staff_Email_Address,
+                          staff.Staff_First_Name.toUpperCase(),
+                          `Your account has been created successfully.\n\nUsername: ${staffUserAccount.Username}\nPassword: ${staffUserAccount.Password}\n\nYou can now log in using these credentials.\n\nIf you did not request this, please contact support immediately.\n\nWelcome aboard!`
+                        );
+
                         navigate("/stafflist");
                         setOpenSuccess(true);
                       });
@@ -229,6 +237,32 @@ const StaffProfile = () => {
       }
     }
   };
+
+  function emailSend(Email_Address, Staff_First_Name, Custom_Message) {
+    // alert(Custom_Message);
+
+    if (Email_Address) {
+      emailjs
+        .send(
+          "service_hoeq7no", // Replace with your EmailJS Service ID
+          "template_d87ppd9", // Replace with your EmailJS Template ID
+          {
+            Email_Address: Email_Address,
+            Staff_First_Name: Staff_First_Name,
+            Custom_Message: Custom_Message,
+          },
+          "Tg8bLRkOoVaK30Jkr" // Replace with your EmailJS Public Key
+        )
+        .then(
+          (result) => {
+            console.log("Email sent successfully", result.text);
+          },
+          (error) => {
+            console.error("Error sending email", error.text);
+          }
+        );
+    }
+  }
 
   return (
     <Container maxWidth="xs" sx={{ mt: 5 }}>

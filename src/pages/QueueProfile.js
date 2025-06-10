@@ -85,6 +85,10 @@ const QueueProfile = () => {
     fetchInitialData();
   }, [queueid, counterid, purposeid, windowid]);
 
+  const foundWindowNumber = windows.find((obj) => {
+    return obj.Window_ID === queue.Window_ID;
+  });
+
   const handleChangeOffice = async (event) => {
     const selected = event.target.value;
     setSelectedCounter(selected);
@@ -144,6 +148,7 @@ const QueueProfile = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
     // console.log(queue);
+    // console.log(foundWindowNumber);
 
     if (selectedWindow !== "") {
       axios
@@ -155,16 +160,16 @@ const QueueProfile = () => {
           } else {
             emailjs
               .send(
-                "service_a44eotc", // Replace with your EmailJS Service ID
-                "template_3rmgz2i", // Replace with your EmailJS Template ID
+                "service_hoeq7no", // Replace with your EmailJS Service ID
+                "template_d87ppd9", // Replace with your EmailJS Template ID
                 {
                   Student_ID: queue.Student_ID,
                   Email_Address: queue.Email_Address,
-                  Custom_Message: `Your queue has been TRANSFERRED kindly go to ${queue.Assigned_Counter.toUpperCase()}'S office at WINDOW ${
-                    queue.Window_Number
+                  Custom_Message: `Your queue has been TRANSFERRED kindly go to ${foundWindowNumber.Assigned_Counter.toUpperCase()}'S office at WINDOW ${
+                    foundWindowNumber.Window_Number
                   }!`,
                 },
-                "JCUSScyWzhjLV0Xky" // Replace with your EmailJS Public Key
+                "Tg8bLRkOoVaK30Jkr" // Replace with your EmailJS Public Key
               )
               .then(
                 (result) => {
@@ -216,12 +221,12 @@ const QueueProfile = () => {
           </FormControl>
 
           <FormControl fullWidth margin="normal">
-            <InputLabel id="purpose-label">Purpose</InputLabel>
+            <InputLabel id="purpose-label">Transaction</InputLabel>
             <Select
               sx={{ textAlign: "left" }}
               value={selectedPurpose}
               onChange={handleChangePurpose}
-              label="Purpose"
+              label="Transaction"
             >
               {purposes.map((purpose) => (
                 <MenuItem key={purpose.Purpose_ID} value={purpose.Purpose_ID}>

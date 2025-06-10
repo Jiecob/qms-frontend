@@ -241,10 +241,10 @@ const QueuePost = () => {
           </FormControl>
 
           <FormControl fullWidth margin="normal" disabled={!selectedCounter}>
-            <InputLabel id="purpose-label">Purpose</InputLabel>
+            <InputLabel id="purpose-label">Transaction</InputLabel>
             <Select
               name="Purpose_ID"
-              label="Purpose"
+              label="Transaction"
               value={queue.Purpose_ID}
               onChange={handleChangePurpose}
               sx={{ textAlign: "left" }}

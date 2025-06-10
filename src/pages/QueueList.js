@@ -30,6 +30,9 @@ import DashboardIcon from "@mui/icons-material/Dashboard";
 import AccessibleIcon from "@mui/icons-material/Accessible";
 import ElderlyIcon from "@mui/icons-material/Elderly";
 import PregnantWomanIcon from "@mui/icons-material/PregnantWoman";
+import HourglassEmptyIcon from "@mui/icons-material/HourglassEmpty";
+import RefreshIcon from "@mui/icons-material/Refresh"; // import the icon
+import BarChartIcon from "@mui/icons-material/BarChart";
 import ListAltIcon from "@mui/icons-material/ListAlt";
 import { Link, useNavigate } from "react-router-dom";
 import { amber, grey } from "@mui/material/colors";
@@ -38,6 +41,29 @@ import { useAuth } from "../context/AuthContext";
 import config from "../config";
 import emailjs from "emailjs-com";
 import QRScanner from "./QRScanner";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from "recharts";
+
+const style = {
+  position: "absolute",
+  top: "50%",
+  left: "50%",
+  transform: "translate(-50%, -50%)",
+  width: "90%",
+  maxWidth: 800,
+  bgcolor: "background.paper",
+  boxShadow: 24,
+  borderRadius: 4,
+  p: 4,
+};
 
 const QueueList = () => {
   const { user } = useAuth();
@@ -48,25 +74,34 @@ const QueueList = () => {
 
   // console.log(loggedInUser);
 
-  const [queue, setQueue] = useState({
-    Remarks: "",
-  }); // Store API data
+  const [queue, setQueue] = useState(null); // Store API data
+  const [currentQueueIndex, setCurrentQueueIndex] = useState(0);
+  const [Current_Student_ID, setCurrent_Student_ID] = useState(false);
+  const [queuesRaw, setQueuesRaw] = useState([]); // Store API data
+  const [windowQueueStats, setWindowQueueStats] = useState({});
   const [queues, setQueues] = useState([]); // Store API data
+
   const [searchQuery, setSearchQuery] = useState(""); // Search input
   const [deleteId, setDeleteId] = useState(null); // Queue ID to delete
   const [openDialog, setOpenDialog] = useState(false); // Delete confirmation dialog
   const [openSuccess, setOpenSuccess] = useState(false);
   const [openStatus, setStatusSuccess] = useState(false);
   const [open, setOpen] = useState(false);
+  const [openChartModal, setOpenChartModal] = useState(false);
   const [openMiniDashboard, setOpenMiniDashboard] = useState(false);
   const [windowNumber, setWindowNumber] = useState("");
   const [assignedCounter, setAssignedCounter] = useState("");
   const [waitingStudent_ID, setWaitingStudent_ID] = useState("");
+  const [isInProgress, setIsInProgress] = useState(false);
+  const [buttonComplete, setButtonComplete] = useState(false);
+
+  const [confirmOpen, setConfirmOpen] = React.useState(false);
+  const [pendingStatus, setPendingStatus] = React.useState(null);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const [Student_ID, setStudent_ID] = useState("");
+  // const [Student_ID, setStudent_ID] = useState("");
 
   let url;
 
@@ -89,6 +124,8 @@ const QueueList = () => {
   }, []);
 
   useEffect(() => {
+    let url = "";
+
     if (user.Role === "staff" && loggedInUser.Staff_Position === "staff") {
       url = `${config.API_BASE_URL}/api/queuelist/staff/window/${loggedInUser.Window_ID}`;
     }
@@ -102,44 +139,78 @@ const QueueList = () => {
       url = `${config.API_BASE_URL}/api/queuelist/administrator`;
     }
 
-    // If loggedInUser.Assigned_Counter is available, proceed with fetching data
+    let intervalId;
+
+    const fetchData = () => {
+      if (loggedInUser) {
+        setLoading(true);
+        axios
+          .get(url)
+          .then((response) => {
+            // console.log(response.data);
+            setQueuesRaw(response.data);
+
+            const formattedData = response.data.map((queue) => ({
+              id: queue.Queue_ID,
+              studentId: queue.Student_ID,
+              date: format(new Date(queue.Start_Time), "yyyy-MM-dd"),
+              time: format(new Date(queue.Start_Time), "hh:mm a"),
+              studentName: `${queue.Last_Name.toUpperCase()}, ${queue.First_Name.toUpperCase()} ${queue.Middle_Name.toUpperCase()}`,
+              coursecode: queue.Course_Major.toUpperCase()
+                ? queue.Course_Code.toUpperCase() +
+                  " - " +
+                  queue.Course_Major.toUpperCase()
+                : queue.Course_Code.toUpperCase(),
+              purpose: queue.Purpose_Description.toUpperCase(),
+              remarks: queue.Remarks,
+              role: queue.Role,
+              assignedCounter: queue.Assigned_Counter.toUpperCase(),
+              status: queue.Status,
+              personcategory: queue.Person_Category,
+              windowId: queue.Window_ID,
+              windowNumber: queue.Window_Number,
+            }));
+
+            setQueues(formattedData);
+
+            const windowStats = {};
+            response.data.forEach((queue) => {
+              const window = queue.Window_Number || "Unassigned";
+              if (!windowStats[window]) {
+                windowStats[window] = { total: 0, completed: 0 };
+              }
+              windowStats[window].total += 1;
+              if (queue.Status === "Completed") {
+                windowStats[window].completed += 1;
+              }
+            });
+
+            setWindowQueueStats(windowStats);
+            setLoading(false);
+          })
+          .catch((error) => {
+            console.error("Error fetching data:", error);
+            setError("Failed to fetch data.");
+            setLoading(false);
+          });
+      }
+    };
+
+    fetchData(); // Initial fetch
+
     if (loggedInUser) {
-      setLoading(true); // Start loading before making the request
-      axios
-        .get(url)
-        .then((response) => {
-          // console.log(response.data);
-          // Format the data into a structure your DataGrid expects
-          const formattedData = response.data.map((queue) => ({
-            id: queue.Queue_ID,
-            studentId: queue.Student_ID,
-            date: format(new Date(queue.Start_Time), "yyyy-MM-dd"), // Ensure correct date format
-            time: format(new Date(queue.Start_Time), "hh:mm a"),
-            studentName: `${queue.Last_Name.toUpperCase()}, ${queue.First_Name.toUpperCase()} ${queue.Middle_Name.toUpperCase()}`,
-            coursecode: queue.Course_Major.toUpperCase()
-              ? queue.Course_Code.toUpperCase() +
-                " - " +
-                queue.Course_Major.toUpperCase()
-              : queue.Course_Code.toUpperCase(), // Required by DataGrid
-            purpose: queue.Purpose_Description.toUpperCase(),
-            remarks: queue.Remarks,
-            role: queue.Role,
-            assignedCounter: queue.Assigned_Counter.toUpperCase(),
-            status: queue.Status,
-            personcategory: queue.Person_Category,
-            windowId: queue.Window_ID,
-            windowNumber: queue.Window_Number,
-          }));
-          setQueues(formattedData);
-          setLoading(false); // Data fetched successfully, stop loading
-        })
-        .catch((error) => {
-          console.error("Error fetching data:", error);
-          setError("Failed to fetch data.");
-          setLoading(false); // Stop loading even if there's an error
-        });
+      intervalId = setInterval(fetchData, 1000); // Auto update every 30 seconds
     }
-  }, [loggedInUser]);
+
+    return () => clearInterval(intervalId); // Cleanup on unmount
+  }, [loggedInUser, user]);
+
+  // Convert windowQueueStats object to an array for charting
+  const chartData = Object.entries(windowQueueStats).map(([window, stats]) => ({
+    window,
+    total: stats.total,
+    completed: stats.completed,
+  }));
 
   // Filter queues based on search query
 
@@ -154,6 +225,12 @@ const QueueList = () => {
       queue.assignedCounter.toLowerCase().includes(searchQuery.toLowerCase()) ||
       queue.status.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const waitingQueues = Array.isArray(queuesRaw)
+    ? queuesRaw.filter(
+        (q) => (q && q.Status === "Waiting") || q.Status === "In Progress"
+      )
+    : [];
 
   // Define table columns
   const columns = [
@@ -212,7 +289,7 @@ const QueueList = () => {
     },
     {
       field: "purpose",
-      headerName: "Purpose",
+      headerName: "Transaction",
       minWidth: 240,
       flex: 1,
       resizable: false,
@@ -224,6 +301,17 @@ const QueueList = () => {
       flex: 1,
       resizable: false,
       hide: user.Role !== "administrator" && user.Role !== "student",
+    },
+    {
+      field: "windowNumber",
+      headerName: "Window No.",
+      minWidth: 100,
+      flex: 1,
+      resizable: false,
+      hide:
+        user.Role !== "administrator" &&
+        user.Role !== "student" &&
+        loggedInUser?.Staff_Position !== "head",
     },
     {
       field: "status",
@@ -240,10 +328,12 @@ const QueueList = () => {
       flex: 1,
       resizable: false,
       hide:
-        user.Role === "administrator" || loggedInUser.Staff_Position === "head",
+        user.Role === "administrator" ||
+        loggedInUser.Staff_Position === "head" ||
+        loggedInUser.Staff_Position === "staff",
       renderCell: (params) => (
         <>
-          {user.Role === "staff" && (
+          {/* {user.Role === "staff" && (
             <>
               <Button
                 title="Manage Status"
@@ -260,7 +350,7 @@ const QueueList = () => {
                 &nbsp; Manage
               </Button>
             </>
-          )}
+          )} */}
           {user.Role === "student" && params.row.status === "Waiting" && (
             <>
               {/* <IconButton
@@ -301,54 +391,92 @@ const QueueList = () => {
   const visibleColumns = columns.filter((col) => !col.hide);
 
   const fetchQueue = () => {
+    let url = "";
+
     if (user.Role === "staff" && loggedInUser.Staff_Position === "staff") {
       url = `${config.API_BASE_URL}/api/queuelist/staff/window/${loggedInUser.Window_ID}`;
-    }
-    if (user.Role === "staff" && loggedInUser.Staff_Position === "head") {
+    } else if (
+      user.Role === "staff" &&
+      loggedInUser.Staff_Position === "head"
+    ) {
       url = `${config.API_BASE_URL}/api/queuelist/staff/${loggedInUser.Counter_ID}`;
-    }
-    if (user.Role === "student") {
+    } else if (user.Role === "student") {
       url = `${config.API_BASE_URL}/api/queuelist/student/${loggedInUser.Student_ID}`;
-    }
-    if (user.Role === "administrator") {
+    } else if (user.Role === "administrator") {
       url = `${config.API_BASE_URL}/api/queuelist/administrator`;
     }
 
-    // If loggedInUser.Assigned_Counter is available, proceed with fetching data
-    if (loggedInUser) {
-      setLoading(true); // Start loading before making the request
+    if (loggedInUser && url) {
+      setLoading(true);
+
       axios
         .get(url)
         .then((response) => {
-          // console.log(response.data);
-          // Format the data into a structure your DataGrid expects
-          const formattedData = response.data.map((queue) => ({
+          const rawData = response.data;
+
+          // ✅ Sort by Queue_Number ascending
+          const sortedData = rawData.sort(
+            (a, b) => a.Queue_Number - b.Queue_Number
+          );
+
+          setQueuesRaw(sortedData);
+
+          const formattedData = sortedData.map((queue) => ({
             id: queue.Queue_ID,
             studentId: queue.Student_ID,
-            date: format(new Date(queue.Start_Time), "yyyy-MM-dd"), // Ensure correct date format
+            date: format(new Date(queue.Start_Time), "yyyy-MM-dd"),
             time: format(new Date(queue.Start_Time), "hh:mm a"),
             studentName: `${queue.Last_Name.toUpperCase()}, ${queue.First_Name.toUpperCase()} ${queue.Middle_Name.toUpperCase()}`,
-            coursecode: queue.Course_Major.toUpperCase()
-              ? queue.Course_Code.toUpperCase() +
-                " - " +
-                queue.Course_Major.toUpperCase()
-              : queue.Course_Code.toUpperCase(), // Required by DataGrid
+            coursecode: queue.Course_Major?.toUpperCase()
+              ? `${queue.Course_Code.toUpperCase()} - ${queue.Course_Major.toUpperCase()}`
+              : queue.Course_Code.toUpperCase(),
             purpose: queue.Purpose_Description.toUpperCase(),
             remarks: queue.Remarks,
             role: queue.Role,
-            assignedCounter: queue.Assigned_Counter.toUpperCase(),
+            assignedCounter: queue.Assigned_Counter?.toUpperCase(),
             status: queue.Status,
             personcategory: queue.Person_Category,
             windowId: queue.Window_ID,
             windowNumber: queue.Window_Number,
           }));
+
           setQueues(formattedData);
-          setLoading(false); // Data fetched successfully, stop loading
+
+          const windowStats = {};
+          response.data.forEach((queue) => {
+            const window = queue.Window_Number || "Unassigned";
+            if (!windowStats[window]) {
+              windowStats[window] = { total: 0, completed: 0 };
+            }
+            windowStats[window].total += 1;
+            if (queue.Status === "Completed") {
+              windowStats[window].completed += 1;
+            }
+          });
+
+          setWindowQueueStats(windowStats);
+
+          setLoading(false);
+
+          // ✅ Automatically select next valid queue
+          const nextActiveIndex = sortedData.findIndex(
+            (q) => q.Status !== "Completed" && q.Status !== "Cancelled"
+          );
+
+          if (nextActiveIndex !== -1) {
+            const nextQueue = sortedData[nextActiveIndex];
+            setCurrentQueueIndex(nextActiveIndex);
+            setQueue(nextQueue);
+            setCurrent_Student_ID(nextQueue.Student_ID || false);
+          } else {
+            setQueue(null);
+            setCurrent_Student_ID(false);
+          }
         })
         .catch((error) => {
           console.error("Error fetching data:", error);
           setError("Failed to fetch data.");
-          setLoading(false); // Stop loading even if there's an error
+          setLoading(false);
         });
     }
   };
@@ -386,157 +514,150 @@ const QueueList = () => {
     }
   });
 
-  // Handle Manage Button
-  const handleManage = (id, studentId, status) => {
-    // alert(id + " " + studentId + " " + status);
-    if (status === "In Progress") {
-      setStudent_ID(studentId);
+  const handleOpenModal = () => {
+    if (queuesRaw.length > 0) {
+      setCurrentQueueIndex(0);
+      setCurrent_Student_ID(queuesRaw[0].Student_ID || false);
+      setQueue(queuesRaw[0]);
+      setIsInProgress(false); // <--- scanner off initially
+      setOpen(true);
     } else {
-      setStudent_ID(null);
-    }
-
-    if (id) {
-      axios
-        .get(`${config.API_BASE_URL}/api/queue/` + id)
-        .then(function (response) {
-          // console.log(response.data[0]);
-          setQueue(response.data[0]);
-
-          setOpen(true);
-        });
+      setOpen(true);
     }
   };
 
-  const handleManageCancel = () => {
-    fetchQueue();
+  const handleCloseModal = () => {
     setOpen(false);
+    setQueue(null);
+    setCurrent_Student_ID(false);
   };
 
   const handleManageStatus = (id, studentId, status) => {
-    if (id === queue.Queue_ID) {
-      // alert(
-      //   id +
-      //     " - " +
-      //     status +
-      //     " - " +
-      //     queue.Remarks +
-      //     " - " +
-      //     loggedInUser.Staff_ID
-      // );
+    if (!queue || id !== queue.Queue_ID) return;
 
-      setQueue((prev) => {
-        const updatedQueue = {
-          ...prev,
+    setQueue((prev) => ({
+      ...prev,
+      Status: status,
+    }));
+
+    if (status === "In Progress") {
+      setIsInProgress(true); // start scanning
+      setCurrent_Student_ID(studentId);
+
+      axios
+        .put(`${config.API_BASE_URL}/api/put/status/`, {
+          Queue_ID: id,
           Status: status,
-        };
-        // console.log(updatedQueue); // logs the new state
-        return updatedQueue;
-      });
+          Remarks: queue.Remarks,
+          Staff_ID: loggedInUser.Staff_ID,
+        })
+        .then((response) => {
+          if (response.data.errno) {
+            alert("Error updating status");
+          } else {
+            emailjs
+              .send(
+                "service_hoeq7no",
+                "template_d87ppd9",
+                {
+                  Student_ID: queue.Student_ID,
+                  Email_Address: queue.Email_Address,
+                  Custom_Message: `Your queue is now ${status.toUpperCase()} kindly go to ${queue.Assigned_Counter.toUpperCase()}'S office at WINDOW ${
+                    queue.Window_Number
+                  }!`,
+                },
+                "Tg8bLRkOoVaK30Jkr"
+              )
+              .then(
+                (result) => {
+                  console.log("Email sent successfully", result.text);
+                },
+                (error) => {
+                  console.error("Error sending email", error.text);
+                }
+              );
+            fetchQueue();
+          }
+        });
+    } else if (status === "Transfer") {
+      setIsInProgress(false);
+      navigate(
+        "/queueprofile/" +
+          id +
+          "/" +
+          queue.Counter_ID +
+          "/" +
+          queue.Purpose_ID +
+          "/" +
+          queue.Window_ID
+      );
+    } else {
+      // Hide scanner when status is Cancelled or Completed or else
+      if (status === "Cancelled" || status === "Completed") {
+        setIsInProgress(false);
+        setCurrent_Student_ID(false);
+      }
 
-      // console.log(queue);
-
-      // console.log(loggedInUser.Staff_ID);
-
-      if (status === "In Progress") {
-        axios
-          .put(`${config.API_BASE_URL}/api/put/status/`, {
-            Queue_ID: id,
-            Status: status,
-            Remarks: queue.Remarks,
-            Staff_ID: loggedInUser.Staff_ID,
-          })
-          .then(function (response) {
-            // console.log(response.data);
-            if (response.data.errno) {
-              alert("error");
+      axios
+        .put(`${config.API_BASE_URL}/api/put/status/`, {
+          Queue_ID: id,
+          Staff_ID: loggedInUser.Staff_ID,
+          Status: status,
+          Remarks: queue.Remarks,
+        })
+        .then((response) => {
+          if (response.data.errno) {
+            alert("Error updating status");
+          } else {
+            let message = "";
+            if (status === "Completed") {
+              message = `Your queue is now ${status.toUpperCase()} kindly go to ${queue.Assigned_Counter.toUpperCase()}'S office at WINDOW ${
+                queue.Window_Number
+              }!`;
+            } else if (status === "Cancelled") {
+              message = `We regret to inform you that your queue has been ${status.toUpperCase()} due to a NO SHOW!`;
             } else {
-              emailjs
-                .send(
-                  "service_a44eotc", // Replace with your EmailJS Service ID
-                  "template_3rmgz2i", // Replace with your EmailJS Template ID
-                  {
-                    Student_ID: queue.Student_ID,
-                    Email_Address: queue.Email_Address,
-                    Custom_Message: `Your queue is now ${status.toUpperCase()} kindly go to ${queue.Assigned_Counter.toUpperCase()}'S office at WINDOW ${
-                      queue.Window_Number
-                    }!`,
-                  },
-                  "JCUSScyWzhjLV0Xky" // Replace with your EmailJS Public Key
-                )
-                .then(
-                  (result) => {
-                    console.log("Email sent successfully", result.text);
-                  },
-                  (error) => {
-                    console.error("Error sending email", error.text);
-                  }
-                );
-              setStudent_ID(studentId);
-              fetchQueue();
+              message = `Your queue has been CREATED. Please wait patiently — you will be notified once it's your turn.`;
             }
-          });
-      } else if (status === "Transfer") {
-        navigate(
-          "/queueprofile/" +
-            id +
-            "/" +
-            queue.Counter_ID +
-            "/" +
-            queue.Purpose_ID +
-            "/" +
-            queue.Window_ID
-        );
-      } else {
-        axios
-          .put(`${config.API_BASE_URL}/api/put/status/`, {
-            Queue_ID: id,
-            Staff_ID: loggedInUser.Staff_ID,
-            Status: status,
-            Remarks: queue.Remarks,
-          })
-          .then(function (response) {
-            // console.log(response.data);
-            if (response.data.errno) {
-              alert("error");
-            } else {
-              let message = "";
 
-              if (status === "Completed") {
-                message = `Your queue is now ${status.toUpperCase()} kindly go to ${queue.Assigned_Counter.toUpperCase()}'S office at WINDOW ${
-                  queue.Window_Number
-                }!`;
-              } else if (status === "Cancelled") {
-                message = `We regret to inform you that your queue has been ${status.toUpperCase()} due to a NO SHOW!`;
+            emailjs
+              .send(
+                "service_hoeq7no",
+                "template_d87ppd9",
+                {
+                  Student_ID: queue.Student_ID,
+                  Email_Address: queue.Email_Address,
+                  Custom_Message: message,
+                },
+                "Tg8bLRkOoVaK30Jkr"
+              )
+              .then(
+                (result) => {
+                  console.log("Email sent successfully", result.text);
+                },
+                (error) => {
+                  console.error("Error sending email", error.text);
+                }
+              );
+
+            fetchQueue();
+
+            if (status === "Cancelled" || status === "Completed") {
+              if (currentQueueIndex + 1 < queuesRaw.length) {
+                const nextIndex = currentQueueIndex + 1;
+                setCurrentQueueIndex(nextIndex);
+                setQueue(queuesRaw[nextIndex]);
+                setCurrent_Student_ID(queuesRaw[nextIndex].Student_ID || false);
               } else {
-                message = `Your queue has been CREATED. Please wait patiently — you will be notified once it's your turn.`;
+                handleCloseModal();
               }
-
-              emailjs
-                .send(
-                  "service_a44eotc", // Replace with your EmailJS Service ID
-                  "template_3rmgz2i", // Replace with your EmailJS Template ID
-                  {
-                    Student_ID: queue.Student_ID,
-                    Email_Address: queue.Email_Address,
-                    Custom_Message: message,
-                  },
-                  "JCUSScyWzhjLV0Xky" // Replace with your EmailJS Public Key
-                )
-                .then(
-                  (result) => {
-                    console.log("Email sent successfully", result.text);
-                  },
-                  (error) => {
-                    console.error("Error sending email", error.text);
-                  }
-                );
-
-              fetchQueue();
-              setStudent_ID(false);
+            } else {
+              // For other statuses (like CREATED), you can decide to hide scanner or not
+              setCurrent_Student_ID(false);
               setOpen(false);
             }
-          });
-      }
+          }
+        });
     }
   };
 
@@ -635,6 +756,34 @@ const QueueList = () => {
     });
   };
 
+  const handleOpenConfirm = (status) => {
+    setPendingStatus(status);
+    setConfirmOpen(true);
+  };
+
+  const handleConfirm = () => {
+    setButtonComplete(false);
+    setConfirmOpen(false);
+    if (pendingStatus && queue) {
+      handleManageStatus(queue.Queue_ID, queue.Student_ID, pendingStatus);
+    }
+    setPendingStatus(null);
+  };
+
+  const handleCancelConfirm = () => {
+    setConfirmOpen(false);
+    setPendingStatus(null);
+  };
+
+  const handleOpenChartModal = () => {
+    setOpenChartModal(true);
+    fetchQueue();
+  };
+
+  const handleCloseChartModal = () => {
+    setOpenChartModal(false);
+  };
+
   return (
     <Container maxWidth="none" sx={{ mt: 5 }}>
       {(user.Role === "administrator" || user.Role === "staff") && (
@@ -715,52 +864,85 @@ const QueueList = () => {
             </Link>
           </Grid2>
         )}
-        {user.Role === "staff" && (
-          <Grid2 size={8} container justifyContent="right" alignItems="center">
-            <Link
-              to={"/queuereport"}
-              style={{ textDecoration: "none", color: "black" }}
-            >
-              <Button
-                variant="contained"
-                sx={{
-                  backgroundColor: amber[500],
-                  color: grey[800],
-                }}
+        {loggedInUser?.Role === "staff" && (
+          <Grid2
+            size={8}
+            container
+            justifyContent="right"
+            alignItems="center"
+            spacing={1}
+          >
+            {loggedInUser?.Staff_Position === "head" && (
+              <Grid2>
+                <Button
+                  variant="contained"
+                  color="info"
+                  onClick={handleOpenChartModal}
+                >
+                  <BarChartIcon />
+                </Button>
+              </Grid2>
+            )}
+            {loggedInUser?.Staff_Position === "staff" && (
+              <Grid2>
+                <Button
+                  variant="contained"
+                  color="success"
+                  onClick={handleOpenModal}
+                >
+                  MANAGE QUEUE
+                </Button>
+              </Grid2>
+            )}
+
+            <Grid2>
+              <Link
+                to={"/queuereport"}
+                style={{ textDecoration: "none", color: "black" }}
               >
-                <ListAltIcon />
-              </Button>
-            </Link>
+                <Button
+                  variant="contained"
+                  sx={{
+                    backgroundColor: amber[500],
+                    color: grey[800],
+                  }}
+                >
+                  <ListAltIcon />
+                </Button>
+              </Link>
+            </Grid2>
           </Grid2>
         )}
       </Grid2>
 
       {/* DataGrid Table */}
-      <DataGrid
-        density="compact"
-        sx={{
-          "& .MuiDataGrid-cell:focus": { outline: "none" }, // Removes focus outline
-          "& .MuiDataGrid-cell:focus-within": { outline: "none" }, // Ensures no focus border
-          "& .waiting-row": { backgroundColor: "#fff3cd !important" }, // Yellow
-          "& .inprogress-row": { backgroundColor: "#A7C7E7 !important" }, // blue
-          "& .completed-row": { backgroundColor: "#d4edda !important" }, // Green
-          "& .cancelled-row": { backgroundColor: "#f8d7da !important" }, // Red
-          "& .MuiDataGrid-row:hover": {
-            backgroundColor: "rgba(68, 68, 68, 0.21) !important", // Transparent dark effect on hover
-          },
-        }}
-        rows={filteredQueues}
-        columns={visibleColumns}
-        pageSize={10}
-        rowsPerPageOptions={[5, 10, 20]}
-        getRowClassName={(params) => {
-          if (params.row.status === "Waiting") return "waiting-row";
-          if (params.row.status === "In Progress") return "inprogress-row";
-          if (params.row.status === "Completed") return "completed-row";
-          if (params.row.status === "Cancelled") return "cancelled-row";
-          return "";
-        }}
-      />
+      <div style={{ height: 400, overflowY: "auto" }}>
+        <DataGrid
+          density="compact"
+          sx={{
+            "& .MuiDataGrid-cell:focus": { outline: "none" },
+            "& .MuiDataGrid-cell:focus-within": { outline: "none" },
+            "& .waiting-row": { backgroundColor: "#fff3cd !important" },
+            "& .inprogress-row": { backgroundColor: "#A7C7E7 !important" },
+            "& .completed-row": { backgroundColor: "#d4edda !important" },
+            "& .cancelled-row": { backgroundColor: "#f8d7da !important" },
+            "& .MuiDataGrid-row:hover": {
+              backgroundColor: "rgba(68, 68, 68, 0.21) !important",
+            },
+          }}
+          rows={filteredQueues}
+          columns={visibleColumns}
+          pageSize={20}
+          rowsPerPageOptions={[5, 10, 20]}
+          getRowClassName={(params) => {
+            if (params.row.status === "Waiting") return "waiting-row";
+            if (params.row.status === "In Progress") return "inprogress-row";
+            if (params.row.status === "Completed") return "completed-row";
+            if (params.row.status === "Cancelled") return "cancelled-row";
+            return "";
+          }}
+        />
+      </div>
 
       <Snackbar
         open={openStatus}
@@ -801,12 +983,7 @@ const QueueList = () => {
         </DialogActions>
       </Dialog>
 
-      <Modal
-        open={open}
-        sx={{
-          overflowY: "auto", // Enables vertical scrolling
-        }}
-      >
+      <Modal open={open} onClose={handleCloseModal} sx={{ overflowY: "auto" }}>
         <Box
           sx={{
             width: "90vw",
@@ -819,176 +996,174 @@ const QueueList = () => {
             position: "relative",
             boxShadow: 24,
             outline: "none",
-            "@media (max-width:600px)": {
-              p: 2,
-            },
+            "@media (max-width:600px)": { p: 2 },
           }}
         >
           <IconButton
-            onClick={handleManageCancel}
-            sx={{
-              position: "absolute",
-              top: 8,
-              right: 8,
-              color: "grey.600",
-            }}
+            onClick={handleCloseModal}
+            sx={{ position: "absolute", top: 8, right: 8, color: "grey.600" }}
           >
             <CloseIcon />
           </IconButton>
 
-          <Box display="flex" alignItems="center" gap={2}>
-            <Typography sx={{ fontSize: 18, color: "grey" }} gutterBottom>
-              ID :
-            </Typography>
-            <Typography sx={{ fontSize: 18 }} gutterBottom>
-              {queue.Student_ID}
-            </Typography>
-          </Box>
+          {queue && waitingQueues.length !== 0 ? (
+            <>
+              <Box display="flex" alignItems="center" gap={2}>
+                <Typography sx={{ fontSize: 18, color: "grey" }} gutterBottom>
+                  ID :
+                </Typography>
+                <Typography sx={{ fontSize: 18 }} gutterBottom>
+                  {queue.Student_ID}
+                </Typography>
+              </Box>
 
-          <Box display="flex" alignItems="center" gap={2}>
-            <Typography sx={{ fontSize: 18, color: "grey" }} gutterBottom>
-              Name :
-            </Typography>
-            <Typography
-              sx={{ fontSize: 18, textTransform: "uppercase" }}
-              gutterBottom
-            >
-              {queue.Last_Name +
-                ", " +
-                queue.First_Name +
-                " " +
-                queue.Middle_Name}
-            </Typography>
-          </Box>
+              <Box display="flex" alignItems="center" gap={2}>
+                <Typography sx={{ fontSize: 18, color: "grey" }} gutterBottom>
+                  Name :
+                </Typography>
+                <Typography
+                  sx={{ fontSize: 18, textTransform: "uppercase" }}
+                  gutterBottom
+                >
+                  {queue.Last_Name +
+                    ", " +
+                    queue.First_Name +
+                    " " +
+                    queue.Middle_Name}
+                </Typography>
+              </Box>
 
-          <Box display="flex" alignItems="center" gap={2}>
-            <Typography sx={{ fontSize: 18, color: "grey" }} gutterBottom>
-              Purpose :
-            </Typography>
-            <Typography
-              sx={{
-                fontSize: 18,
-                wordBreak: "break-word",
-                overflowWrap: "break-word",
-                textTransform: "uppercase",
-              }}
-              gutterBottom
-            >
-              {queue.Purpose_Description}
-            </Typography>
-          </Box>
+              <Box display="flex" alignItems="center" gap={2}>
+                <Typography sx={{ fontSize: 18, color: "grey" }} gutterBottom>
+                  Purpose :
+                </Typography>
+                <Typography
+                  sx={{
+                    fontSize: 18,
+                    wordBreak: "break-word",
+                    overflowWrap: "break-word",
+                    textTransform: "uppercase",
+                  }}
+                  gutterBottom
+                >
+                  {queue.Purpose_Description}
+                </Typography>
+              </Box>
 
-          <TextField
-            sx={{ mt: 2, mb: 4 }}
-            rows={3}
-            fullWidth
-            multiline
-            label="Remarks"
-            name="Remarks"
-            value={queue.Remarks}
-            onChange={handleTextChange}
-          />
+              <TextField
+                sx={{ mt: 2, mb: 4 }}
+                rows={3}
+                fullWidth
+                multiline
+                label="Remarks"
+                name="Remarks"
+                value={queue.Remarks || ""}
+                onChange={handleTextChange}
+              />
 
-          {Student_ID && (
+              {isInProgress && Current_Student_ID && (
+                <Box sx={{ mb: 4 }}>
+                  <QRScanner
+                    Student_ID={Current_Student_ID}
+                    onScanResult={(isValid) => {
+                      if (isValid) {
+                        setButtonComplete(true);
+                      } else {
+                        // show error or retry
+                      }
+                    }}
+                  />
+                </Box>
+              )}
+
+              <Grid2
+                container
+                spacing={2}
+                sx={{
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                }}
+              >
+                <Grid2 item xs={6}>
+                  <Button
+                    variant="contained"
+                    sx={{ backgroundColor: "red" }}
+                    onClick={() => handleOpenConfirm("Cancelled")}
+                    fullWidth
+                  >
+                    Cancelled
+                  </Button>
+                </Grid2>
+                <Grid2 item xs={6}>
+                  <Button
+                    variant="contained"
+                    sx={{ backgroundColor: "#2196f3" }}
+                    onClick={() =>
+                      handleManageStatus(
+                        queue.Queue_ID,
+                        queue.Student_ID,
+                        "In Progress"
+                      )
+                    }
+                    fullWidth
+                  >
+                    In Progress
+                  </Button>
+                </Grid2>
+                <Grid2 item xs={6}>
+                  <Button
+                    variant="contained"
+                    color="success"
+                    onClick={() => handleOpenConfirm("Completed")}
+                    fullWidth
+                    disabled={!buttonComplete} // <-- this should be controlled by parent state
+                  >
+                    Complete
+                  </Button>
+                </Grid2>
+                <Grid2 item xs={3}>
+                  <Button
+                    variant="contained"
+                    sx={{ backgroundColor: "grey" }}
+                    onClick={() =>
+                      handleManageStatus(
+                        queue.Queue_ID,
+                        queue.Student_ID,
+                        "Transfer"
+                      )
+                    }
+                    fullWidth
+                  >
+                    Transfer
+                  </Button>
+                </Grid2>
+              </Grid2>
+            </>
+          ) : (
             <Box
               sx={{
-                mb: 4,
+                textAlign: "center",
+                py: 6,
+                color: "text.secondary",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: 1.5,
               }}
             >
-              <QRScanner Student_ID={Student_ID} />
+              <HourglassEmptyIcon
+                sx={{ fontSize: 48, color: "primary.main" }}
+              />
+              <Typography variant="h6" component="div">
+                No queues at the moment
+              </Typography>
+              <Typography variant="body2" sx={{ maxWidth: 300 }}>
+                There are currently no queue entries. Please check back later or
+                refresh the page.
+              </Typography>
             </Box>
           )}
-
-          <Grid2
-            container
-            spacing={2}
-            sx={{
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-            }}
-          >
-            <Grid2 item xs={6}>
-              <Button
-                variant="contained"
-                sx={{ backgroundColor: "red" }}
-                onClick={() =>
-                  handleManageStatus(
-                    queue.Queue_ID,
-                    queue.Student_ID,
-                    "Cancelled"
-                  )
-                }
-                fullWidth
-              >
-                No Show
-              </Button>
-            </Grid2>
-            <Grid2 item xs={6}>
-              <Button
-                variant="contained"
-                sx={{ backgroundColor: "#ffeb3b", color: "black" }}
-                onClick={() =>
-                  handleManageStatus(
-                    queue.Queue_ID,
-                    queue.Student_ID,
-                    "Waiting"
-                  )
-                }
-                fullWidth
-              >
-                Waiting
-              </Button>
-            </Grid2>
-            <Grid2 item xs={6}>
-              <Button
-                variant="contained"
-                sx={{ backgroundColor: "#2196f3" }}
-                onClick={() =>
-                  handleManageStatus(
-                    queue.Queue_ID,
-                    queue.Student_ID,
-                    "In Progress"
-                  )
-                }
-                fullWidth
-              >
-                In Progress
-              </Button>
-            </Grid2>
-            <Grid2 item xs={6}>
-              <Button
-                variant="contained"
-                color="success"
-                onClick={() =>
-                  handleManageStatus(
-                    queue.Queue_ID,
-                    queue.Student_ID,
-                    "Completed"
-                  )
-                }
-                fullWidth
-              >
-                Complete
-              </Button>
-            </Grid2>
-            <Grid2 item xs={3}>
-              <Button
-                variant="contained"
-                sx={{ backgroundColor: "grey" }}
-                onClick={() =>
-                  handleManageStatus(
-                    queue.Queue_ID,
-                    queue.Student_ID,
-                    "Transfer"
-                  )
-                }
-                fullWidth
-              >
-                Transfer
-              </Button>
-            </Grid2>
-          </Grid2>
         </Box>
       </Modal>
 
@@ -1159,6 +1334,139 @@ const QueueList = () => {
           </Box>
         </Box>
       </Modal>
+
+      <Modal open={openChartModal} onClose={handleCloseChartModal}>
+        <Box sx={style}>
+          {/* Close Button */}
+          <IconButton
+            aria-label="close"
+            onClick={handleCloseChartModal}
+            sx={{
+              position: "absolute",
+              right: 16,
+              top: 16,
+              color: (theme) => theme.palette.grey[500],
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
+
+          {/* Refresh Button */}
+          <IconButton
+            aria-label="refresh"
+            onClick={() => {
+              fetchQueue();
+            }}
+            sx={{
+              position: "absolute",
+              right: 56, // space it 40px left from the close button
+              top: 16,
+              color: (theme) => theme.palette.grey[500],
+            }}
+          >
+            <RefreshIcon />
+          </IconButton>
+
+          {chartData.length > 0 ? (
+            <div className="bg-white shadow-lg rounded-2xl p-4">
+              <h2 className="text-xl font-semibold mb-4 text-gray-800">
+                Queue Overview
+              </h2>
+              <ResponsiveContainer width="100%" height={400}>
+                <BarChart
+                  data={chartData}
+                  margin={{ top: 20, right: 30, left: 0, bottom: 20 }}
+                  barSize={30}
+                >
+                  <CartesianGrid strokeDasharray="4 4" stroke="#e5e7eb" />
+                  <XAxis
+                    dataKey="window"
+                    tick={{
+                      fill: "#1f2937", // Darker color
+                      fontSize: 14,
+                      fontWeight: "bold",
+                    }}
+                    tickFormatter={(value) => `Window ${value}`}
+                  />
+                  <YAxis
+                    allowDecimals={false}
+                    tick={{ fill: "#6b7280", fontSize: 12 }}
+                    axisLine={false}
+                  />
+                  <Tooltip
+                    formatter={(value, name) => [value, name]}
+                    labelFormatter={(label) => `Window ${label}`}
+                    contentStyle={{
+                      backgroundColor: "#f9fafb",
+                      borderColor: "#e5e7eb",
+                      borderRadius: "0.5rem",
+                      fontSize: "14px",
+                    }}
+                    itemStyle={{ color: "#374151" }}
+                    labelStyle={{ fontWeight: "bold", color: "#111827" }}
+                  />
+                  <Legend
+                    wrapperStyle={{ paddingTop: 20 }}
+                    formatter={(value) => (
+                      <span style={{ color: "#4b5563", fontSize: "14px" }}>
+                        {value}
+                      </span>
+                    )}
+                  />
+                  <Bar
+                    dataKey="total"
+                    fill="#6366f1"
+                    name="Total Queues"
+                    radius={[6, 6, 0, 0]}
+                  />
+                  <Bar
+                    dataKey="completed"
+                    fill="#10b981"
+                    name="Completed Queues"
+                    radius={[6, 6, 0, 0]}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <div className="text-center text-gray-500 py-10">
+              <p>No data available for chart.</p>
+            </div>
+          )}
+        </Box>
+      </Modal>
+
+      <Dialog open={confirmOpen} onClose={handleCancelConfirm}>
+        <DialogTitle>
+          {pendingStatus === "Cancelled"
+            ? "Confirm Cancellation"
+            : "Confirm Completion"}
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            {pendingStatus === "Cancelled"
+              ? "Are you sure you want to cancel this queue? This action cannot be undone."
+              : "Are you sure you want to mark this queue as completed?"}
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={handleCancelConfirm}
+            color="error"
+            variant="outlined"
+          >
+            No
+          </Button>
+          <Button
+            onClick={handleConfirm}
+            color="success"
+            variant="contained"
+            autoFocus
+          >
+            Yes
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 };

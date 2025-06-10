@@ -135,7 +135,7 @@ const PurposeProfile = () => {
                 margin="normal"
                 required
                 fullWidth
-                label="Purpose Description"
+                label="Transaction Description"
                 type="text"
                 name="Purpose_Description"
                 value={purpose.Purpose_Description || ""}
@@ -147,7 +147,7 @@ const PurposeProfile = () => {
                 sx={{ "& input": { textTransform: "uppercase" } }}
                 margin="normal"
                 fullWidth
-                label="Purpose Type"
+                label="Transaction Type"
                 type="text"
                 name="Purpose_Type"
                 value={purpose.Purpose_Type || ""}

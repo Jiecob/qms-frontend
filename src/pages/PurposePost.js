@@ -103,7 +103,7 @@ const PurposePost = () => {
           color="#424242"
           gutterBottom
         >
-          Add Purpose
+          Add Transaction
         </Typography>
         <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
           <TextField
@@ -112,7 +112,7 @@ const PurposePost = () => {
             required
             fullWidth
             autoFocus
-            label="Purpose Description"
+            label="Transaction Description"
             type="text"
             name="Purpose_Description"
             onChange={handleChange}
@@ -121,7 +121,7 @@ const PurposePost = () => {
             sx={{ "& input": { textTransform: "uppercase" } }}
             margin="normal"
             fullWidth
-            label="Purpose Type"
+            label="Transaction Type"
             type="text"
             name="Purpose_Type"
             onChange={handleChange}

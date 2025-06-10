@@ -42,7 +42,7 @@ const StaffList = () => {
     axios
       .get(`${config.API_BASE_URL}/api/user/` + user.User_ID + `/` + user.Role)
       .then(function (response) {
-        console.log(response.data[0]);
+        // console.log(response.data[0]);
         setLoggedInUser(response.data[0]);
       });
   }, []);
@@ -50,7 +50,8 @@ const StaffList = () => {
   useEffect(() => {
     if (loggedInUser?.Staff_Position === "head") {
       url = `${config.API_BASE_URL}/api/staffs/${loggedInUser.Counter_ID}/${loggedInUser.Staff_ID}`;
-    } else {
+    }
+    if (user.Role === "administrator") {
       url = `${config.API_BASE_URL}/api/staffs`;
     }
 

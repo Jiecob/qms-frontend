@@ -18,7 +18,7 @@ import {
 } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
 import { amber, grey } from "@mui/material/colors";
-import SchoolLogo from "../images/vsu-logo.png";
+import SchoolLogo from "../images/new-vsu-logo.png";
 import { useAuth } from "../context/AuthContext";
 import QueueIcon from "@mui/icons-material/Queue";
 import PeopleIcon from "@mui/icons-material/People";
@@ -27,11 +27,13 @@ import SchoolIcon from "@mui/icons-material/School";
 import BusinessIcon from "@mui/icons-material/Business";
 import MenuBookIcon from "@mui/icons-material/MenuBook";
 import ArrowDropDownIcon from "@mui/icons-material/ArrowDropDown";
+import AssignmentIcon from "@mui/icons-material/Assignment";
 import LogoutIcon from "@mui/icons-material/Logout";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import BadgeIcon from "@mui/icons-material/Badge";
 import axios from "axios";
 import config from "../config";
+import { Assignment } from "@mui/icons-material";
 
 const Navbar = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -61,6 +63,7 @@ const Navbar = () => {
     axios
       .get(`${config.API_BASE_URL}/api/user/${user.User_ID}/${user.Role}`)
       .then((response) => {
+        console.log(response.data[0]);
         setLoggedInUser(response.data[0]);
       });
   }, []);
@@ -144,7 +147,7 @@ const Navbar = () => {
               </MenuItem> */}
 
               {(user.Role === "administrator" ||
-                loggedInUser.Staff_Position === "head") && (
+                loggedInUser?.Staff_Position === "head") && (
                 <MenuItem
                   sx={{ color: grey[800] }}
                   component={Link}
@@ -202,6 +205,32 @@ const Navbar = () => {
                   </MenuItem>
                 </div>
               )}
+
+              {loggedInUser?.Staff_Position === "head" && (
+                <>
+                  <MenuItem
+                    sx={{ color: grey[800] }}
+                    component={Link}
+                    to={"/purposelist/" + loggedInUser.Counter_ID}
+                  >
+                    <ListItemIcon>
+                      <AssignmentIcon fontSize="small" />
+                    </ListItemIcon>
+                    Transactions
+                  </MenuItem>
+                  <MenuItem
+                    sx={{ color: grey[800] }}
+                    component={Link}
+                    to={"/windowlist/" + loggedInUser.Counter_ID}
+                  >
+                    <ListItemIcon>
+                      <BusinessIcon fontSize="small" />
+                    </ListItemIcon>
+                    Windows
+                  </MenuItem>
+                </>
+              )}
+
               {(user.Role === "administrator" ||
                 user.Role === "student" ||
                 loggedInUser.Staff_Position === "head") && (
@@ -343,25 +372,6 @@ const Navbar = () => {
                 <ListItemText
                   sx={{ textDecoration: "none", color: "black" }}
                   primary="Staffs"
-                />
-              </ListItem>
-            </>
-          )}
-
-          {user.Role === "administrator" && (
-            <>
-              <ListItem
-                component={Link}
-                button
-                to="/officelist"
-                onClick={handleDrawerToggle}
-              >
-                <ListItemIcon>
-                  <BusinessIcon />
-                </ListItemIcon>
-                <ListItemText
-                  sx={{ textDecoration: "none", color: "black" }}
-                  primary="Offices"
                 />
               </ListItem>
             </>

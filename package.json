@@ -2,7 +2,7 @@
   "name": "qms-frontend",
   "version": "0.1.0",
   "private": true,
-  "homepage": "https://github.com/Jiecob/qms-frontend",
+  "homepage": "https://jiecob.github.io/qms-frontend/",
   "dependencies": {
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
@@ -29,10 +29,12 @@
     "mysql2": "^3.12.0",
     "qrcode.react": "^4.2.0",
     "react": "^19.0.0",
+    "react-datepicker": "^8.4.0",
     "react-dom": "^19.0.0",
     "react-hook-form": "^7.54.2",
     "react-router-dom": "^7.1.5",
     "react-scripts": "5.0.1",
+    "recharts": "^2.15.3",
     "styled-components": "^6.1.15",
     "tailwindcss": "^4.0.8",
     "web-vitals": "^2.1.4"

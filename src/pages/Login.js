@@ -15,7 +15,7 @@ import {
   IconButton,
   InputLabel,
 } from "@mui/material";
-import SchoolLogo from "../images/vsu-logo.png";
+import SchoolLogo from "../images/new-vsu-logo.png";
 import QueueLogo from "../images/queuing-logo.png";
 import { amber } from "@mui/material/colors";
 import { useAuth } from "../context/AuthContext";

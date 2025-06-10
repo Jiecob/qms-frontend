@@ -18,10 +18,12 @@ import {
   MenuItem,
   FormControl,
   InputLabel,
+  Modal,
 } from "@mui/material";
-import SchoolLogo from "../images/vsu-logo.png";
+import SchoolLogo from "../images/new-vsu-logo.png";
 import { amber } from "@mui/material/colors";
 import config from "../config";
+import emailjs from "emailjs-com";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 
 const Register = () => {
@@ -39,10 +41,20 @@ const Register = () => {
     Confirm_Password: "",
   });
 
+  const [emailVerfication, setEmailVerification] = useState([]);
+
+  const [verificationCode, setVerificationCode] = useState(
+    Math.floor(Math.random() * 899999 + 100000)
+  );
+
   const [students, setStudents] = useState([]);
   const [courses, setCourses] = useState([]);
 
   const [openDialog, setOpenDialog] = useState(false);
+
+  const [openEmailVerification, setOpenEmailVerification] = useState(false);
+
+  const [errorVerification, setErrorVerification] = useState("");
 
   useEffect(() => {
     axios.get(`${config.API_BASE_URL}/api/students`).then(function (response) {
@@ -53,7 +65,7 @@ const Register = () => {
 
   useEffect(() => {
     axios.get(`${config.API_BASE_URL}/api/courses`).then(function (response) {
-      console.log(response.data);
+      // console.log(response.data);
       setCourses(response.data);
     });
   }, []);
@@ -68,6 +80,14 @@ const Register = () => {
 
   const [error, setError] = useState("");
 
+  const handleChangeEmailVerification = (event) => {
+    const value = event.target.value;
+    setEmailVerification({
+      ...emailVerfication,
+      [event.target.name]: value,
+    });
+  };
+
   const handleChange = (event) => {
     const value = event.target.value;
     setStudent({
@@ -76,7 +96,7 @@ const Register = () => {
     });
   };
 
-  //   console.log(student);
+  // console.log(student);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -102,25 +122,69 @@ const Register = () => {
           if (foundEmailAddress) {
             setError("Email Address is already used!");
           } else {
-            axios
-              .post(`${config.API_BASE_URL}/api/post/student`, student)
-              .then(function (response) {
-                console.log(response.data);
-                setOpenDialog(true);
-                // navigate("/login");
-              });
-            axios
-              .post(`${config.API_BASE_URL}/api/post/user/student`, student)
-              .then(function (response) {
-                console.log(response.data);
-                setOpenDialog(true);
-                // navigate("/login");
-              });
+            const Custom_Message = `Hi ${student.Student_ID},\n\nYour verification code is:\n\n${verificationCode}\n\nPlease enter this code to complete your verification.\n\nIf you didn’t request this code, please ignore this message.`;
+            emailSend(student.Email_Address, Custom_Message);
+            setOpenEmailVerification(true);
           }
         }
       }
     }
   };
+
+  const handleVerify = (e) => {
+    // console.log(verificationCode);
+    if (emailVerfication.verificationCode == verificationCode) {
+      axios
+        .post(`${config.API_BASE_URL}/api/post/student`, student)
+        .then(function (response) {
+          console.log(response.data);
+          setOpenEmailVerification(false);
+          setOpenDialog(true);
+          // navigate("/login");
+        });
+      axios
+        .post(`${config.API_BASE_URL}/api/post/user/student`, student)
+        .then(function (response) {
+          console.log(response.data);
+
+          const Custom_Message = `Hi ${student.Student_ID},\n\nYour account has been created.\n\nUsername: ${student.Student_ID}\nPassword: ${student.Password}\n\nPlease use these credentials to log in to your account.\n\nIf you did not request this account, please ignore this message.`;
+
+          emailSend(student.Email_Address, Custom_Message);
+
+          setOpenEmailVerification(false);
+          setOpenDialog(true);
+          // navigate("/login");
+        });
+    } else {
+      setErrorVerification("Invalid verification code. Please try again.");
+    }
+  };
+
+  function emailSend(Email_Address, Custom_Message) {
+    // alert(Custom_Message);
+
+    if (Email_Address) {
+      emailjs
+        .send(
+          "service_hoeq7no", // Replace with your EmailJS Service ID
+          "template_d87ppd9", // Replace with your EmailJS Template ID
+          {
+            Email_Address: Email_Address,
+            Custom_Message: Custom_Message,
+          },
+          "Tg8bLRkOoVaK30Jkr" // Replace with your EmailJS Public Key
+        )
+        .then(
+          (result) => {
+            console.log("Email sent successfully", result.text);
+            // setOpenEmailVerification(true);
+          },
+          (error) => {
+            console.error("Error sending email", error.text);
+          }
+        );
+    }
+  }
 
   return (
     <Container component="main" maxWidth="xs">
@@ -211,6 +275,7 @@ const Register = () => {
               name="Course_ID"
               label="Course"
               onChange={handleChange}
+              value={student.Course_ID || ""}
               sx={{ textAlign: "left" }} // Ensures text alignment
               MenuProps={{
                 PaperProps: {
@@ -221,7 +286,7 @@ const Register = () => {
               }}
             >
               {courses.map((course, index) => (
-                <MenuItem key={index} value={course.Course_ID}>
+                <MenuItem key={index} value={course.Course_ID || ""}>
                   {`${course.Course_Code}${
                     course.Course_Major ? " - " + course.Course_Major : ""
                   }`.toUpperCase()}
@@ -235,6 +300,7 @@ const Register = () => {
               name="Person_Category"
               label="Person Category"
               onChange={handleChange}
+              value={student.Person_Category || ""}
               sx={{ textAlign: "left" }} // Ensures text alignment
               MenuProps={{
                 PaperProps: {
@@ -301,6 +367,64 @@ const Register = () => {
         </Box>
       </Paper>
 
+      <Dialog
+        open={openEmailVerification}
+        onClose={() => setOpenEmailVerification(false)}
+      >
+        <DialogTitle>Email Verification</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            We've sent a verification code to your email. Please enter the code
+            below to verify your email address.
+          </DialogContentText>
+
+          {errorVerification && (
+            <Typography
+              variant="body2"
+              color="error"
+              style={{ marginTop: "8px" }}
+            >
+              {errorVerification}
+            </Typography>
+          )}
+
+          <TextField
+            autoFocus
+            required
+            margin="dense"
+            id="verificationCode"
+            name="verificationCode"
+            label="Verification Code"
+            type="text"
+            fullWidth
+            variant="standard"
+            autoComplete="off"
+            readOnly
+            inputProps={{
+              inputMode: "numeric",
+              pattern: "[0-9]*",
+              maxLength: 6,
+              style: {
+                fontSize: "24px",
+                textAlign: "center",
+              },
+            }}
+            InputLabelProps={{
+              style: { fontSize: "18px" },
+            }}
+            onChange={handleChangeEmailVerification}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenEmailVerification(false)}>
+            Cancel
+          </Button>
+          <Button type="submit" onClick={handleVerify}>
+            Verify
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       {/* Delete Confirmation Dialog */}
       <Dialog open={openDialog}>
         <DialogContent>
@@ -317,7 +441,6 @@ const Register = () => {
                 >
                   Login
                 </Link>
-                .
               </span>
             </DialogContentText>
           </Box>
